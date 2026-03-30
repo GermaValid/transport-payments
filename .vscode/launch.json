@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug transport-payments (sqlite3)",
+        "type": "go",
+        "request": "launch",
+        "mode": "exec",
+        "program": "${workspaceFolder}/__debug_bin.exe",
+        "cwd": "${workspaceFolder}",
+        "preLaunchTask": "go: build (debug sqlite3)",
+        "console": "integratedTerminal",
+        "env": {
+          "CGO_ENABLED": "1",
+          "CC": "C:\\msys64\\ucrt64\\bin\\gcc.exe",
+          "CXX": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+          "CGO_CFLAGS": "-IC:/msys64/ucrt64/include",
+          "CGO_LDFLAGS": "-LC:/msys64/ucrt64/lib",
+          "PATH": "C:\\msys64\\ucrt64\\bin;C:\\Program Files\\Go\\bin;${env:PATH}"
+        }
+      }
+    ]
+  }
