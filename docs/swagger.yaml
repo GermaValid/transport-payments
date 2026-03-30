@@ -1,5 +1,56 @@
 basePath: /api/v1
 definitions:
+  models.Card:
+    properties:
+      balance:
+        type: number
+      card_number:
+        type: string
+      id:
+        type: integer
+      is_blocked:
+        type: integer
+      key_id:
+        type: integer
+      owner_name:
+        type: string
+    type: object
+  models.CardsResponse:
+    properties:
+      cards:
+        items:
+          $ref: '#/definitions/models.Card'
+        type: array
+    type: object
+  models.CreateCardRequest:
+    properties:
+      balance:
+        type: number
+      card_number:
+        type: string
+      is_blocked:
+        type: integer
+      key_id:
+        type: integer
+      owner_name:
+        type: string
+    type: object
+  models.CreateKeyRequest:
+    properties:
+      key_name:
+        type: string
+      key_value:
+        type: string
+    type: object
+  models.CreateTerminalRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+      serial_number:
+        type: string
+    type: object
   models.CreateUserRequest:
     properties:
       full_name:
@@ -11,10 +62,43 @@ definitions:
       password:
         type: string
     type: object
+  models.EchoRequest:
+    properties:
+      message:
+        type: string
+    type: object
+  models.EchoResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   models.ErrorResponse:
     properties:
       error:
         type: string
+    type: object
+  models.HealthResponse:
+    properties:
+      status:
+        type: string
+    type: object
+  models.Key:
+    properties:
+      id:
+        type: integer
+      key_name:
+        type: string
+      key_value:
+        type: string
+    type: object
+  models.KeysResponse:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/models.Key'
+        type: array
     type: object
   models.LoginRequest:
     properties:
@@ -37,6 +121,13 @@ definitions:
       message:
         type: string
     type: object
+  models.PingResponse:
+    properties:
+      message:
+        type: string
+      status:
+        type: string
+    type: object
   models.ProfileResponse:
     properties:
       id:
@@ -44,6 +135,105 @@ definitions:
       is_admin:
         type: integer
       login:
+        type: string
+    type: object
+  models.Terminal:
+    properties:
+      address:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      serial_number:
+        type: string
+    type: object
+  models.TerminalAuthorizeRequest:
+    properties:
+      amount:
+        type: number
+      card_number:
+        type: string
+      terminal_serial:
+        type: string
+    type: object
+  models.TerminalAuthorizeResponse:
+    properties:
+      approved:
+        type: boolean
+      balance:
+        type: number
+      message:
+        type: string
+    type: object
+  models.TerminalKeysRequest:
+    properties:
+      terminal_serial:
+        type: string
+    type: object
+  models.TerminalKeysResponse:
+    properties:
+      keys:
+        items:
+          $ref: '#/definitions/models.Key'
+        type: array
+      terminal_serial:
+        type: string
+    type: object
+  models.TerminalsResponse:
+    properties:
+      terminals:
+        items:
+          $ref: '#/definitions/models.Terminal'
+        type: array
+    type: object
+  models.Transaction:
+    properties:
+      amount:
+        type: number
+      card_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      terminal_id:
+        type: integer
+    type: object
+  models.TransactionsResponse:
+    properties:
+      transactions:
+        items:
+          $ref: '#/definitions/models.Transaction'
+        type: array
+    type: object
+  models.UpdateCardRequest:
+    properties:
+      balance:
+        type: number
+      card_number:
+        type: string
+      is_blocked:
+        type: integer
+      key_id:
+        type: integer
+      owner_name:
+        type: string
+    type: object
+  models.UpdateKeyRequest:
+    properties:
+      key_name:
+        type: string
+      key_value:
+        type: string
+    type: object
+  models.UpdateTerminalRequest:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+      serial_number:
         type: string
     type: object
   models.UpdateUserRequest:
@@ -73,6 +263,447 @@ info:
   title: Transport Payments API
   version: "1.0"
 paths:
+  /cards:
+    get:
+      description: Returns all transport cards
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.CardsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List cards
+      tags:
+      - cards
+    post:
+      consumes:
+      - application/json
+      description: Creates a new transport card
+      parameters:
+      - description: Create card request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateCardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Card'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create card
+      tags:
+      - cards
+  /cards/{id}:
+    delete:
+      description: Deletes transport card by id
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete card
+      tags:
+      - cards
+    get:
+      description: Returns one transport card by id
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Card'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get card by ID
+      tags:
+      - cards
+    put:
+      consumes:
+      - application/json
+      description: Updates transport card by id
+      parameters:
+      - description: Card ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update card request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateCardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Card'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update card
+      tags:
+      - cards
+  /echo:
+    post:
+      consumes:
+      - application/json
+      description: Echoes message back to client
+      parameters:
+      - description: Echo request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.EchoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.EchoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Echo
+      tags:
+      - system
+  /health:
+    get:
+      description: Returns service health status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.HealthResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Health
+      tags:
+      - system
+  /keys:
+    get:
+      description: Returns all card keys
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.KeysResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List keys
+      tags:
+      - keys
+    post:
+      consumes:
+      - application/json
+      description: Creates a new card key
+      parameters:
+      - description: Create key request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Key'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create key
+      tags:
+      - keys
+  /keys/{id}:
+    delete:
+      description: Deletes key by id if it is not used by cards
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete key
+      tags:
+      - keys
+    get:
+      description: Returns one key by id
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Key'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get key by ID
+      tags:
+      - keys
+    put:
+      consumes:
+      - application/json
+      description: Updates key by id
+      parameters:
+      - description: Key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update key request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Key'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update key
+      tags:
+      - keys
   /login:
     post:
       consumes:
@@ -111,6 +742,23 @@ paths:
       summary: Login
       tags:
       - auth
+  /ping:
+    get:
+      description: Health check ping endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.PingResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Ping
+      tags:
+      - system
   /profile:
     get:
       description: Returns current user from JWT
@@ -134,6 +782,304 @@ paths:
       summary: Get profile
       tags:
       - auth
+  /terminal/authorize:
+    post:
+      consumes:
+      - application/json
+      description: Checks card, balance and authorizes payment transaction
+      parameters:
+      - description: Terminal authorize request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TerminalAuthorizeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TerminalAuthorizeResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Authorize terminal payment
+      tags:
+      - terminal
+  /terminal/keys:
+    post:
+      consumes:
+      - application/json
+      description: Returns all available keys for terminal card decryption
+      parameters:
+      - description: Terminal keys request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.TerminalKeysRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TerminalKeysResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Load keys for terminal
+      tags:
+      - terminal
+  /terminals:
+    get:
+      description: Returns all terminals
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TerminalsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List terminals
+      tags:
+      - terminals
+    post:
+      consumes:
+      - application/json
+      description: Creates a new terminal
+      parameters:
+      - description: Create terminal request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateTerminalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Terminal'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create terminal
+      tags:
+      - terminals
+  /terminals/{id}:
+    delete:
+      description: Deletes terminal by id if it is not used by transactions
+      parameters:
+      - description: Terminal ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.MessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete terminal
+      tags:
+      - terminals
+    get:
+      description: Returns one terminal by id
+      parameters:
+      - description: Terminal ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Terminal'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get terminal by ID
+      tags:
+      - terminals
+    put:
+      consumes:
+      - application/json
+      description: Updates terminal by id
+      parameters:
+      - description: Terminal ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update terminal request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateTerminalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Terminal'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update terminal
+      tags:
+      - terminals
+  /transactions:
+    get:
+      description: Returns all transactions ordered from newest to oldest
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.TransactionsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "405":
+          description: Method Not Allowed
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List transactions
+      tags:
+      - transactions
   /users:
     get:
       description: Returns all users

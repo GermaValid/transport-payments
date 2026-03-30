@@ -8,7 +8,7 @@ import (
 	"transport-payments/models"
 )
 
-const dataSourceName = "db/transport.db"
+const dataSourceName = "transport.db"
 
 func Open() (*sql.DB, error) {
 	database, err := sql.Open("sqlite3", dataSourceName)

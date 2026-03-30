@@ -29,16 +29,16 @@ func main() {
 	}
 	defer database.Close()
 
-	err = db.InitSchema(database)
-	if err != nil {
-		fmt.Println("schema init error:", err)
-		return
-	}
-	err = db.SeedData(database)
-	if err != nil {
-		fmt.Println("seed data error:", err)
-		return
-	}
+	// err = db.InitSchema(database)
+	// if err != nil {
+	// 	fmt.Println("schema init error:", err)
+	// 	return
+	// }
+	// err = db.SeedData(database)
+	// if err != nil {
+	// 	fmt.Println("seed data error:", err)
+	// 	return
+	// }
 
 	err = db.SeedUsers(database)
 	if err != nil {

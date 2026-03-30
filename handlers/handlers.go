@@ -22,6 +22,14 @@ func writeJSON(w http.ResponseWriter, statusCode int, data any) error {
 	return json.NewEncoder(w).Encode(data)
 }
 
+// PingHandler godoc
+// @Summary Ping
+// @Description Health check ping endpoint
+// @Tags system
+// @Produce json
+// @Success 200 {object} models.PingResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Router /ping [get]
 func PingHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
@@ -45,6 +53,17 @@ func PingHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// EchoHandler godoc
+// @Summary Echo
+// @Description Echoes message back to client
+// @Tags system
+// @Accept json
+// @Produce json
+// @Param request body models.EchoRequest true "Echo request"
+// @Success 200 {object} models.EchoResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Router /echo [post]
 func EchoHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
@@ -91,6 +110,14 @@ func EchoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// HealthHandler godoc
+// @Summary Health
+// @Description Returns service health status
+// @Tags system
+// @Produce json
+// @Success 200 {object} models.HealthResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Router /health [get]
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
@@ -664,6 +691,18 @@ func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// TerminalAuthorizeHandler godoc
+// @Summary Authorize terminal payment
+// @Description Checks card, balance and authorizes payment transaction
+// @Tags terminal
+// @Accept json
+// @Produce json
+// @Param request body models.TerminalAuthorizeRequest true "Terminal authorize request"
+// @Success 200 {object} models.TerminalAuthorizeResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminal/authorize [post]
 func TerminalAuthorizeHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -717,6 +756,19 @@ func TerminalAuthorizeHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// TerminalKeysHandler godoc
+// @Summary Load keys for terminal
+// @Description Returns all available keys for terminal card decryption
+// @Tags terminal
+// @Accept json
+// @Produce json
+// @Param request body models.TerminalKeysRequest true "Terminal keys request"
+// @Success 200 {object} models.TerminalKeysResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminal/keys [post]
 func TerminalKeysHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -780,6 +832,18 @@ func TerminalKeysHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// CardsHandler godoc
+// @Summary List cards
+// @Description Returns all transport cards
+// @Tags cards
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.CardsResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards [get]
 func CardsHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -798,6 +862,17 @@ func CardsHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetCards godoc
+// @Summary List cards
+// @Description Returns all transport cards
+// @Tags cards
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.CardsResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards [get]
 func handleGetCards(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	cards, err := db.GetAllCards(database)
 	if err != nil {
@@ -818,6 +893,21 @@ func handleGetCards(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	}
 }
 
+// handleCreateCard godoc
+// @Summary Create card
+// @Description Creates a new transport card
+// @Tags cards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.CreateCardRequest true "Create card request"
+// @Success 201 {object} models.Card
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards [post]
 func handleCreateCard(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	var req models.CreateCardRequest
 
@@ -952,6 +1042,20 @@ func CardByIDHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetCardByID godoc
+// @Summary Get card by ID
+// @Description Returns one transport card by id
+// @Tags cards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Card ID"
+// @Success 200 {object} models.Card
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards/{id} [get]
 func handleGetCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	card, err := db.GetCardByID(database, id)
 	if err != nil {
@@ -980,6 +1084,22 @@ func handleGetCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB,
 	}
 }
 
+// handleUpdateCardByID godoc
+// @Summary Update card
+// @Description Updates transport card by id
+// @Tags cards
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Card ID"
+// @Param request body models.UpdateCardRequest true "Update card request"
+// @Success 200 {object} models.Card
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards/{id} [put]
 func handleUpdateCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	var req models.UpdateCardRequest
 
@@ -1072,6 +1192,20 @@ func handleUpdateCardByID(w http.ResponseWriter, r *http.Request, database *sql.
 	}
 }
 
+// handleDeleteCardByID godoc
+// @Summary Delete card
+// @Description Deletes transport card by id
+// @Tags cards
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Card ID"
+// @Success 200 {object} models.MessageResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /cards/{id} [delete]
 func handleDeleteCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	err := db.DeleteCardByID(database, id)
 	if err != nil {
@@ -1120,6 +1254,17 @@ func KeysHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetKeys godoc
+// @Summary List keys
+// @Description Returns all card keys
+// @Tags keys
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.KeysResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /keys [get]
 func handleGetKeys(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	keys, err := db.GetAllKeys(database)
 	if err != nil {
@@ -1140,6 +1285,20 @@ func handleGetKeys(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	}
 }
 
+// handleCreateKey godoc
+// @Summary Create key
+// @Description Creates a new card key
+// @Tags keys
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.CreateKeyRequest true "Create key request"
+// @Success 201 {object} models.Key
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /keys [post]
 func handleCreateKey(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	var req models.CreateKeyRequest
 
@@ -1199,6 +1358,17 @@ func TerminalsHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetTerminals godoc
+// @Summary List terminals
+// @Description Returns all terminals
+// @Tags terminals
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.TerminalsResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminals [get]
 func handleGetTerminals(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	terminals, err := db.GetAllTerminals(database)
 	if err != nil {
@@ -1219,6 +1389,20 @@ func handleGetTerminals(w http.ResponseWriter, r *http.Request, database *sql.DB
 	}
 }
 
+// handleCreateTerminal godoc
+// @Summary Create terminal
+// @Description Creates a new terminal
+// @Tags terminals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body models.CreateTerminalRequest true "Create terminal request"
+// @Success 201 {object} models.Terminal
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminals [post]
 func handleCreateTerminal(w http.ResponseWriter, r *http.Request, database *sql.DB) {
 	var req models.CreateTerminalRequest
 
@@ -1260,6 +1444,18 @@ func handleCreateTerminal(w http.ResponseWriter, r *http.Request, database *sql.
 	}
 }
 
+// TransactionsHandler godoc
+// @Summary List transactions
+// @Description Returns all transactions ordered from newest to oldest
+// @Tags transactions
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} models.TransactionsResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 405 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /transactions [get]
 func TransactionsHandler(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -1344,6 +1540,20 @@ func KeyByIDHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetKeyByID godoc
+// @Summary Get key by ID
+// @Description Returns one key by id
+// @Tags keys
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Key ID"
+// @Success 200 {object} models.Key
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /keys/{id} [get]
 func handleGetKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	key, err := db.GetKeyByID(database, id)
 	if err != nil {
@@ -1372,6 +1582,22 @@ func handleGetKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, 
 	}
 }
 
+// handleUpdateKeyByID godoc
+// @Summary Update key
+// @Description Updates key by id
+// @Tags keys
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Key ID"
+// @Param request body models.UpdateKeyRequest true "Update key request"
+// @Success 200 {object} models.Key
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /keys/{id} [put]
 func handleUpdateKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	var req models.UpdateKeyRequest
 
@@ -1423,6 +1649,20 @@ func handleUpdateKeyByID(w http.ResponseWriter, r *http.Request, database *sql.D
 	}
 }
 
+// handleDeleteKeyByID godoc
+// @Summary Delete key
+// @Description Deletes key by id if it is not used by cards
+// @Tags keys
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Key ID"
+// @Success 200 {object} models.MessageResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /keys/{id} [delete]
 func handleDeleteKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	usageCount, err := db.GetKeyUsageCount(database, id)
 	if err != nil {
@@ -1526,6 +1766,20 @@ func TerminalByIDHandler(database *sql.DB) http.HandlerFunc {
 	}
 }
 
+// handleGetTerminalByID godoc
+// @Summary Get terminal by ID
+// @Description Returns one terminal by id
+// @Tags terminals
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Terminal ID"
+// @Success 200 {object} models.Terminal
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminals/{id} [get]
 func handleGetTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	terminal, err := db.GetTerminalByID(database, id)
 	if err != nil {
@@ -1554,6 +1808,22 @@ func handleGetTerminalByID(w http.ResponseWriter, r *http.Request, database *sql
 	}
 }
 
+// handleUpdateTerminalByID godoc
+// @Summary Update terminal
+// @Description Updates terminal by id
+// @Tags terminals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Terminal ID"
+// @Param request body models.UpdateTerminalRequest true "Update terminal request"
+// @Success 200 {object} models.Terminal
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminals/{id} [put]
 func handleUpdateTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	var req models.UpdateTerminalRequest
 
@@ -1605,6 +1875,20 @@ func handleUpdateTerminalByID(w http.ResponseWriter, r *http.Request, database *
 	}
 }
 
+// handleDeleteTerminalByID godoc
+// @Summary Delete terminal
+// @Description Deletes terminal by id if it is not used by transactions
+// @Tags terminals
+// @Produce json
+// @Security BearerAuth
+// @Param id path int true "Terminal ID"
+// @Success 200 {object} models.MessageResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse
+// @Failure 403 {object} models.ErrorResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /terminals/{id} [delete]
 func handleDeleteTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
 	usageCount, err := db.GetTerminalUsageCount(database, id)
 	if err != nil {
