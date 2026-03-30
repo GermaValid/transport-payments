@@ -530,3 +530,202 @@ func CreateCard(database *sql.DB, req models.CreateCardRequest) (models.Card, er
 
 	return card, nil
 }
+
+func GetKeyByID(database *sql.DB, id int64) (models.Key, error) {
+	query := `
+	SELECT id, key_value, key_name
+	FROM keys
+	WHERE id = ?;
+	`
+
+	var key models.Key
+
+	err := database.QueryRow(query, id).Scan(
+		&key.ID,
+		&key.KeyValue,
+		&key.KeyName,
+	)
+	if err != nil {
+		return models.Key{}, err
+	}
+
+	return key, nil
+}
+
+func GetCardByID(database *sql.DB, id int64) (models.Card, error) {
+	query := `
+	SELECT id, card_number, balance, is_blocked, owner_name, key_id
+	FROM cards
+	WHERE id = ?;
+	`
+
+	var card models.Card
+
+	err := database.QueryRow(query, id).Scan(
+		&card.ID,
+		&card.CardNumber,
+		&card.Balance,
+		&card.IsBlocked,
+		&card.OwnerName,
+		&card.KeyID,
+	)
+	if err != nil {
+		return models.Card{}, err
+	}
+
+	return card, nil
+}
+
+func UpdateCardByID(database *sql.DB, id int64, req models.UpdateCardRequest) (models.Card, error) {
+	query := `
+	UPDATE cards
+	SET card_number = ?, balance = ?, is_blocked = ?, owner_name = ?, key_id = ?
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(
+		query,
+		req.CardNumber,
+		req.Balance,
+		req.IsBlocked,
+		req.OwnerName,
+		req.KeyID,
+		id,
+	)
+	if err != nil {
+		return models.Card{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return models.Card{}, err
+	}
+
+	if rowsAffected == 0 {
+		return models.Card{}, sql.ErrNoRows
+	}
+
+	card := models.Card{
+		ID:         id,
+		CardNumber: req.CardNumber,
+		Balance:    req.Balance,
+		IsBlocked:  req.IsBlocked,
+		OwnerName:  req.OwnerName,
+		KeyID:      req.KeyID,
+	}
+
+	return card, nil
+}
+
+func DeleteCardByID(database *sql.DB, id int64) error {
+	query := `
+	DELETE FROM cards
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func CreateKey(database *sql.DB, req models.CreateKeyRequest) (models.Key, error) {
+	query := `
+	INSERT INTO keys (key_value, key_name)
+	VALUES (?, ?);
+	`
+
+	result, err := database.Exec(query, req.KeyValue, req.KeyName)
+	if err != nil {
+		return models.Key{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return models.Key{}, err
+	}
+
+	key := models.Key{
+		ID:       id,
+		KeyValue: req.KeyValue,
+		KeyName:  req.KeyName,
+	}
+
+	return key, nil
+}
+
+func GetAllTerminals(database *sql.DB) ([]models.Terminal, error) {
+	query := `
+	SELECT id, serial_number, name, address
+	FROM terminals
+	ORDER BY id;
+	`
+
+	rows, err := database.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	terminals := make([]models.Terminal, 0)
+
+	for rows.Next() {
+		var terminal models.Terminal
+
+		err = rows.Scan(
+			&terminal.ID,
+			&terminal.SerialNumber,
+			&terminal.Name,
+			&terminal.Address,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		terminals = append(terminals, terminal)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return terminals, nil
+}
+
+func CreateTerminal(database *sql.DB, req models.CreateTerminalRequest) (models.Terminal, error) {
+	query := `
+	INSERT INTO terminals (serial_number, name, address)
+	VALUES (?, ?, ?);
+	`
+
+	result, err := database.Exec(query, req.SerialNumber, req.Name, req.Address)
+	if err != nil {
+		return models.Terminal{}, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return models.Terminal{}, err
+	}
+
+	terminal := models.Terminal{
+		ID:           id,
+		SerialNumber: req.SerialNumber,
+		Name:         req.Name,
+		Address:      req.Address,
+	}
+
+	return terminal, nil
+}

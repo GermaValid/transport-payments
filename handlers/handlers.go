@@ -862,6 +862,27 @@ func handleCreateCard(w http.ResponseWriter, r *http.Request, database *sql.DB) 
 		return
 	}
 
+	_, err = db.GetKeyByID(database, req.KeyID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "key not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to validate key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
 	card, err := db.CreateCard(database, req)
 	if err != nil {
 		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
@@ -874,6 +895,366 @@ func handleCreateCard(w http.ResponseWriter, r *http.Request, database *sql.DB) 
 	}
 
 	err = writeJSON(w, http.StatusCreated, card)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func CardByIDHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idPart := strings.TrimPrefix(r.URL.Path, "/api/v1/cards/")
+		if idPart == "" {
+			err := writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "card id is required",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		id, err := strconv.ParseInt(idPart, 10, 64)
+		if err != nil {
+			err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "invalid card id",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		if id <= 0 {
+			err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "card id must be positive",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			handleGetCardByID(w, r, database, id)
+		case http.MethodPut:
+			handleUpdateCardByID(w, r, database, id)
+		case http.MethodDelete:
+			handleDeleteCardByID(w, r, database, id)
+		default:
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+		}
+	}
+}
+
+func handleGetCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	card, err := db.GetCardByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "card not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get card",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, card)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleUpdateCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	var req models.UpdateCardRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid json",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.CardNumber == "" || req.OwnerName == "" || req.KeyID <= 0 {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "card_number, owner_name and positive key_id are required",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.Balance < 0 {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "balance cannot be negative",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.IsBlocked != 0 && req.IsBlocked != 1 {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "is_blocked must be 0 or 1",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	_, err = db.GetKeyByID(database, req.KeyID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "key not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to validate key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	card, err := db.UpdateCardByID(database, id, req)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "card not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to update card",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, card)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleDeleteCardByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	err := db.DeleteCardByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "card not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to delete card",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, models.MessageResponse{
+		Message: "card deleted",
+	})
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func KeysHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handleGetKeys(w, r, database)
+		case http.MethodPost:
+			handleCreateKey(w, r, database)
+		default:
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+		}
+	}
+}
+
+func handleGetKeys(w http.ResponseWriter, r *http.Request, database *sql.DB) {
+	keys, err := db.GetAllKeys(database)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get keys",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, models.KeysResponse{
+		Keys: keys,
+	})
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleCreateKey(w http.ResponseWriter, r *http.Request, database *sql.DB) {
+	var req models.CreateKeyRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid json",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.KeyValue == "" || req.KeyName == "" {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "key_value and key_name are required",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	key, err := db.CreateKey(database, req)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to create key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusCreated, key)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func TerminalsHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handleGetTerminals(w, r, database)
+		case http.MethodPost:
+			handleCreateTerminal(w, r, database)
+		default:
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+		}
+	}
+}
+
+func handleGetTerminals(w http.ResponseWriter, r *http.Request, database *sql.DB) {
+	terminals, err := db.GetAllTerminals(database)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get terminals",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, models.TerminalsResponse{
+		Terminals: terminals,
+	})
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleCreateTerminal(w http.ResponseWriter, r *http.Request, database *sql.DB) {
+	var req models.CreateTerminalRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid json",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.SerialNumber == "" || req.Name == "" || req.Address == "" {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "serial_number, name and address are required",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	terminal, err := db.CreateTerminal(database, req)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to create terminal",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusCreated, terminal)
 	if err != nil {
 		fmt.Println("write error:", err)
 	}

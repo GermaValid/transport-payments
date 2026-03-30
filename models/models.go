@@ -128,3 +128,30 @@ type CreateCardRequest struct {
 type CardsResponse struct {
 	Cards []Card `json:"cards"`
 }
+
+type UpdateCardRequest struct {
+	CardNumber string  `json:"card_number"`
+	Balance    float64 `json:"balance"`
+	IsBlocked  int     `json:"is_blocked"`
+	OwnerName  string  `json:"owner_name"`
+	KeyID      int64   `json:"key_id"`
+}
+
+type CreateKeyRequest struct {
+	KeyValue string `json:"key_value"`
+	KeyName  string `json:"key_name"`
+}
+
+type KeysResponse struct {
+	Keys []Key `json:"keys"`
+}
+
+type CreateTerminalRequest struct {
+	SerialNumber string `json:"serial_number"`
+	Name         string `json:"name"`
+	Address      string `json:"address"`
+}
+
+type TerminalsResponse struct {
+	Terminals []Terminal `json:"terminals"`
+}
