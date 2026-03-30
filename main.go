@@ -87,6 +87,18 @@ func main() {
 		middleware.RequireAdmin(handlers.TerminalsHandler(database)),
 	))
 
+	http.HandleFunc("/api/v1/transactions", middleware.RequireAuth(
+		middleware.RequireAdmin(handlers.TransactionsHandler(database)),
+	))
+
+	http.HandleFunc("/api/v1/keys/", middleware.RequireAuth(
+		middleware.RequireAdmin(handlers.KeyByIDHandler(database)),
+	))
+
+	http.HandleFunc("/api/v1/terminals/", middleware.RequireAuth(
+		middleware.RequireAdmin(handlers.TerminalByIDHandler(database)),
+	))
+
 	fmt.Println("Server started on :8080")
 	err = http.ListenAndServe(":8080", nil)
 	if err != nil {

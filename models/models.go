@@ -155,3 +155,18 @@ type CreateTerminalRequest struct {
 type TerminalsResponse struct {
 	Terminals []Terminal `json:"terminals"`
 }
+
+type TransactionsResponse struct {
+	Transactions []Transaction `json:"transactions"`
+}
+
+type UpdateKeyRequest struct {
+	KeyValue string `json:"key_value"`
+	KeyName  string `json:"key_name"`
+}
+
+type UpdateTerminalRequest struct {
+	SerialNumber string `json:"serial_number"`
+	Name         string `json:"name"`
+	Address      string `json:"address"`
+}

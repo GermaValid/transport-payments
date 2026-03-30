@@ -729,3 +729,200 @@ func CreateTerminal(database *sql.DB, req models.CreateTerminalRequest) (models.
 
 	return terminal, nil
 }
+
+func GetAllTransactions(database *sql.DB) ([]models.Transaction, error) {
+	query := `
+	SELECT id, amount, card_id, terminal_id, created_at
+	FROM transactions
+	ORDER BY id DESC;
+	`
+
+	rows, err := database.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	transactions := make([]models.Transaction, 0)
+
+	for rows.Next() {
+		var transaction models.Transaction
+
+		err = rows.Scan(
+			&transaction.ID,
+			&transaction.Amount,
+			&transaction.CardID,
+			&transaction.TerminalID,
+			&transaction.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		transactions = append(transactions, transaction)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
+}
+
+func GetKeyUsageCount(database *sql.DB, keyID int64) (int, error) {
+	query := `
+	SELECT COUNT(*)
+	FROM cards
+	WHERE key_id = ?;
+	`
+
+	var count int
+	err := database.QueryRow(query, keyID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func UpdateKeyByID(database *sql.DB, id int64, req models.UpdateKeyRequest) (models.Key, error) {
+	query := `
+	UPDATE keys
+	SET key_value = ?, key_name = ?
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(query, req.KeyValue, req.KeyName, id)
+	if err != nil {
+		return models.Key{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return models.Key{}, err
+	}
+
+	if rowsAffected == 0 {
+		return models.Key{}, sql.ErrNoRows
+	}
+
+	return models.Key{
+		ID:       id,
+		KeyValue: req.KeyValue,
+		KeyName:  req.KeyName,
+	}, nil
+}
+
+func DeleteKeyByID(database *sql.DB, id int64) error {
+	query := `
+	DELETE FROM keys
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}
+
+func GetTerminalByID(database *sql.DB, id int64) (models.Terminal, error) {
+	query := `
+	SELECT id, serial_number, name, address
+	FROM terminals
+	WHERE id = ?;
+	`
+
+	var terminal models.Terminal
+
+	err := database.QueryRow(query, id).Scan(
+		&terminal.ID,
+		&terminal.SerialNumber,
+		&terminal.Name,
+		&terminal.Address,
+	)
+	if err != nil {
+		return models.Terminal{}, err
+	}
+
+	return terminal, nil
+}
+
+func GetTerminalUsageCount(database *sql.DB, terminalID int64) (int, error) {
+	query := `
+	SELECT COUNT(*)
+	FROM transactions
+	WHERE terminal_id = ?;
+	`
+
+	var count int
+	err := database.QueryRow(query, terminalID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func UpdateTerminalByID(database *sql.DB, id int64, req models.UpdateTerminalRequest) (models.Terminal, error) {
+	query := `
+	UPDATE terminals
+	SET serial_number = ?, name = ?, address = ?
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(query, req.SerialNumber, req.Name, req.Address, id)
+	if err != nil {
+		return models.Terminal{}, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return models.Terminal{}, err
+	}
+
+	if rowsAffected == 0 {
+		return models.Terminal{}, sql.ErrNoRows
+	}
+
+	return models.Terminal{
+		ID:           id,
+		SerialNumber: req.SerialNumber,
+		Name:         req.Name,
+		Address:      req.Address,
+	}, nil
+}
+
+func DeleteTerminalByID(database *sql.DB, id int64) error {
+	query := `
+	DELETE FROM terminals
+	WHERE id = ?;
+	`
+
+	result, err := database.Exec(query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
+}

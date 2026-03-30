@@ -1259,3 +1259,399 @@ func handleCreateTerminal(w http.ResponseWriter, r *http.Request, database *sql.
 		fmt.Println("write error:", err)
 	}
 }
+
+func TransactionsHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		transactions, err := db.GetAllTransactions(database)
+		if err != nil {
+			err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+				Error: "failed to get transactions",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusOK, models.TransactionsResponse{
+			Transactions: transactions,
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+	}
+}
+
+func KeyByIDHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idPart := strings.TrimPrefix(r.URL.Path, "/api/v1/keys/")
+		if idPart == "" {
+			err := writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "key id is required",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		id, err := strconv.ParseInt(idPart, 10, 64)
+		if err != nil {
+			err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "invalid key id",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		if id <= 0 {
+			err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "key id must be positive",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			handleGetKeyByID(w, r, database, id)
+		case http.MethodPut:
+			handleUpdateKeyByID(w, r, database, id)
+		case http.MethodDelete:
+			handleDeleteKeyByID(w, r, database, id)
+		default:
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+		}
+	}
+}
+
+func handleGetKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	key, err := db.GetKeyByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "key not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, key)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleUpdateKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	var req models.UpdateKeyRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid json",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.KeyValue == "" || req.KeyName == "" {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "key_value and key_name are required",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	key, err := db.UpdateKeyByID(database, id, req)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "key not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to update key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, key)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleDeleteKeyByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	usageCount, err := db.GetKeyUsageCount(database, id)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to check key usage",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if usageCount > 0 {
+		err = writeJSON(w, http.StatusForbidden, models.ErrorResponse{
+			Error: "cannot delete key that is used by cards",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = db.DeleteKeyByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "key not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to delete key",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, models.MessageResponse{
+		Message: "key deleted",
+	})
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func TerminalByIDHandler(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		idPart := strings.TrimPrefix(r.URL.Path, "/api/v1/terminals/")
+		if idPart == "" {
+			err := writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "terminal id is required",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		id, err := strconv.ParseInt(idPart, 10, 64)
+		if err != nil {
+			err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "invalid terminal id",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		if id <= 0 {
+			err := writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+				Error: "terminal id must be positive",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		switch r.Method {
+		case http.MethodGet:
+			handleGetTerminalByID(w, r, database, id)
+		case http.MethodPut:
+			handleUpdateTerminalByID(w, r, database, id)
+		case http.MethodDelete:
+			handleDeleteTerminalByID(w, r, database, id)
+		default:
+			err := writeJSON(w, http.StatusMethodNotAllowed, models.ErrorResponse{
+				Error: "method not allowed",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+		}
+	}
+}
+
+func handleGetTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	terminal, err := db.GetTerminalByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "terminal not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get terminal",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, terminal)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleUpdateTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	var req models.UpdateTerminalRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid json",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if req.SerialNumber == "" || req.Name == "" || req.Address == "" {
+		err = writeJSON(w, http.StatusBadRequest, models.ErrorResponse{
+			Error: "serial_number, name and address are required",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	terminal, err := db.UpdateTerminalByID(database, id, req)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "terminal not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to update terminal",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, terminal)
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
+
+func handleDeleteTerminalByID(w http.ResponseWriter, r *http.Request, database *sql.DB, id int64) {
+	usageCount, err := db.GetTerminalUsageCount(database, id)
+	if err != nil {
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to check terminal usage",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	if usageCount > 0 {
+		err = writeJSON(w, http.StatusForbidden, models.ErrorResponse{
+			Error: "cannot delete terminal that is used by transactions",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = db.DeleteTerminalByID(database, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			err = writeJSON(w, http.StatusNotFound, models.ErrorResponse{
+				Error: "terminal not found",
+			})
+			if err != nil {
+				fmt.Println("write error:", err)
+			}
+			return
+		}
+
+		err = writeJSON(w, http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to delete terminal",
+		})
+		if err != nil {
+			fmt.Println("write error:", err)
+		}
+		return
+	}
+
+	err = writeJSON(w, http.StatusOK, models.MessageResponse{
+		Message: "terminal deleted",
+	})
+	if err != nil {
+		fmt.Println("write error:", err)
+	}
+}
